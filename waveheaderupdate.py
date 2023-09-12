@@ -4,14 +4,19 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 import tkinter.font as tkFont
+from datetime import timedelta
 
 header_size = 0
 valid_wave = False
 
-def get_spec():
-    global header_size, valid_wave
+def select_file():
     input_file_path_entry.delete(0, 'end')
     input_file_path_entry.insert(0, filedialog.askopenfilename())
+    get_spec()
+
+def get_spec():
+    global header_size, valid_wave
+
     try:
         input_file_path = input_file_path_entry.get() 
         header_size = 0
@@ -67,12 +72,11 @@ def update_wav_header():
     global header_size, valid_wave
 
     try:
+
         if valid_wave == False and forceheader_var.get() == 0:
             raise ValueError("Not a valid WAVE file")
     
         input_file_path = input_file_path_entry.get()
-
-        header_size = 44
         num_channels = int(num_channels_var.get())
         sample_rate = int(sample_rate_var.get())
         bits_per_sample = int(bits_per_sample_var.get())
@@ -125,7 +129,7 @@ def update_wav_header():
     except Exception as e:
         result_label.config(text=f"Could not update header:\n{e}")
 
-def set_duration():
+def set_duration(event=0):
     input_file_path = input_file_path_entry.get()
     file_size = os.path.getsize(input_file_path)
     num_channels = int(num_channels_var.get())
@@ -135,7 +139,7 @@ def set_duration():
     sample_size = bits_per_sample // 8
     num_samples = data_size // (num_channels * sample_size)
     duration_seconds = int(num_samples / sample_rate)
-    duration_seconds_var.set(duration_seconds)
+    duration_seconds_var.set(timedelta(seconds=duration_seconds))
 
 def toggle_combobox_state():
     state = str(num_channels_dropdown.cget("state"))
@@ -143,6 +147,7 @@ def toggle_combobox_state():
         num_channels_dropdown.config(state="disabled")
         sample_rate_dropdown.config(state="disabled")
         bits_per_sample_dropdown.config(state="disabled")
+        get_spec()
     else:
         num_channels_dropdown.config(state="normal")
         sample_rate_dropdown.config(state="normal")
@@ -163,30 +168,33 @@ frame.grid(row=0, column=0, padx=20, pady=20)
 ttk.Label(frame, text="File:").grid(row=0, column=0, sticky="w")
 input_file_path_entry = ttk.Entry(frame, width=50)
 input_file_path_entry.grid(row=1, column=0, columnspan=2)
-ttk.Button(frame, text="Browse", command=lambda: get_spec()).grid(row=0, column=2, rowspan=2)
+ttk.Button(frame, text="Browse", command=lambda: select_file()).grid(row=0, column=2, rowspan=2)
 
 ttk.Label(frame, text="Number of Channels:").grid(row=2, column=0, sticky="w")
 num_channels_var = tk.StringVar()
 num_channels_dropdown = ttk.Combobox(frame, textvariable=num_channels_var, values=[1, 2, 8], font=custom_font, state="disabled")
 num_channels_dropdown.grid(row=2, column=1)
+num_channels_dropdown.bind("<<ComboboxSelected>>", set_duration)
+num_channels_dropdown.bind("<FocusOut>", set_duration)
 
 ttk.Label(frame, text="Sample Rate:").grid(row=3, column=0, sticky="w")
 sample_rate_var = tk.StringVar()
 sample_rate_dropdown = ttk.Combobox(frame, textvariable=sample_rate_var, values=[44100, 48000, 96000], font=custom_font, state="disabled")
 sample_rate_dropdown.grid(row=3, column=1)
+sample_rate_dropdown.bind("<<ComboboxSelected>>", set_duration)
+sample_rate_dropdown.bind("<FocusOut>", set_duration)
 
 ttk.Label(frame, text="Bit Depth:").grid(row=4, column=0, sticky="w")
 bits_per_sample_var = tk.StringVar()
 bits_per_sample_dropdown = ttk.Combobox(frame, textvariable=bits_per_sample_var, values=[16, 24, 32], font=custom_font, state="disabled")
 bits_per_sample_dropdown.grid(row=4, column=1)
+bits_per_sample_dropdown.bind("<<ComboboxSelected>>", set_duration)
+bits_per_sample_dropdown.bind("<FocusOut>", set_duration)
 
 ttk.Label(frame, text="Time:").grid(row=5, column=0, sticky="w")
 duration_seconds_var = tk.StringVar()
 duration_seconds_label = ttk.Label(frame, textvariable=duration_seconds_var, font=custom_font)
 duration_seconds_label.grid(row=5, column=1)
-
-durationcalc_button = ttk.Button(frame, text="calculate time", command=set_duration)
-durationcalc_button.grid(row=5, column=2)
 
 forceheader_var = tk.IntVar()
 forceheader_checkbox = ttk.Checkbutton(frame, text="force header", variable=forceheader_var)
